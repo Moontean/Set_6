@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "axios": "^1.9.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "imap-simple": "^5.1.0",
+    "nodemailer": "^7.0.2",
+    "pg": "^8.15.6",
+    "poplib": "^0.1.7",
+    "sequelize": "^6.37.7"
+  }
+}
