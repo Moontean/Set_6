@@ -34,14 +34,16 @@ jobs:
       - name: Run Docker containers
         run: |
           docker-compose up -d
-          docker ps -a  # Добавить для диагностики
+          docker ps -a  # Диагностика запущенных контейнеров
 
       - name: Test application endpoints
         run: |
-          sleep 60  # Увеличить время до 60 секунд
-          curl -v http://localhost:3000 || { echo "Client endpoint failed"; exit 1; }
-          curl -v http://localhost:5000/api/tasks || { echo "Tasks API failed"; exit 1; }
-          curl -v -X POST -H "Content-Type: application/json" -d '{"to":"test@example.com","subject":"Test","text":"Test email"}' http://localhost:5000/api/email/send || { echo "Email API failed"; exit 1; }
+          # Увеличим время ожидания до 90 секунд
+          sleep 90
+          # Используем имена служб вместо localhost
+          curl -v --connect-timeout 10 http://client:3000 || { echo "Client endpoint failed"; exit 1; }
+          curl -v --connect-timeout 10 http://server:5000/api/tasks || { echo "Tasks API failed"; exit 1; }
+          curl -v --connect-timeout 10 -X POST -H "Content-Type: application/json" -d '{"to":"test@example.com","subject":"Test","text":"Test email"}' http://server:5000/api/email/send || { echo "Email API failed"; exit 1; }
 
       - name: Stop and clean containers
         if: always()
