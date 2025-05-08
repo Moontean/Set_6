@@ -48,9 +48,10 @@ jobs:
       - name: Test application endpoints
         run: |
           sleep 120  # Увеличим время ожидания до 120 секунд
-          docker run --rm --network container:client curlimages/curl -v --connect-timeout 10 http://client:3000 || { echo "Client endpoint failed"; exit 1; }
-          docker run --rm --network container:server curlimages/curl -v --connect-timeout 10 http://server:5000/api/tasks || { echo "Tasks API failed"; exit 1; }
-          docker run --rm --network container:server curlimages/curl -v --connect-timeout 10 -X POST -H "Content-Type: application/json" -d '{"to":"test@example.com","subject":"Test","text":"Test email"}' http://server:5000/api/email/send || { echo "Email API failed"; exit 1; }
+          # Используем хост-ноду для доступа к маппленному порту
+          curl -v --connect-timeout 10 http://localhost:3000 || { echo "Client endpoint failed"; exit 1; }
+          curl -v --connect-timeout 10 http://localhost:5000/api/tasks || { echo "Tasks API failed"; exit 1; }
+          curl -v --connect-timeout 10 -X POST -H "Content-Type: application/json" -d '{"to":"test@example.com","subject":"Test","text":"Test email"}' http://localhost:5000/api/email/send || { echo "Email API failed"; exit 1; }
 
       - name: Stop and clean containers
         if: always()
