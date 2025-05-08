@@ -14,8 +14,8 @@ services:
       context: .
       dockerfile: Dockerfile.server
     environment:
-      EMAIL_USER: alex.moonsound.2003@gmail.com
-      EMAIL_PASS: srvcenletjqfcfel
+      EMAIL_USER: your-email@gmail.com
+      EMAIL_PASS: your-app-password
     ports:
       - "5000:5000"
     depends_on:
@@ -30,4 +30,3 @@ services:
       - server
 volumes:
   pgdata:
- 

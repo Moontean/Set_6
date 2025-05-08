@@ -36,10 +36,18 @@ jobs:
           docker-compose up -d
           docker ps -a  # Диагностика запущенных контейнеров
 
+      - name: Check container logs
+        run: |
+          echo "Client logs:"
+          docker logs todo-list-client-1 || echo "Failed to get client logs"
+          echo "Server logs:"
+          docker logs todo-list-server-1 || echo "Failed to get server logs"
+          echo "Database logs:"
+          docker logs todo-list-db-1 || echo "Failed to get database logs"
+
       - name: Test application endpoints
         run: |
-          sleep 90  # Увеличим время ожидания до 90 секунд
-          # Выполняем тесты внутри временного контейнера, подключенного к той же сети
+          sleep 120  # Увеличим время ожидания до 120 секунд
           docker run --rm --network container:client curlimages/curl -v --connect-timeout 10 http://client:3000 || { echo "Client endpoint failed"; exit 1; }
           docker run --rm --network container:server curlimages/curl -v --connect-timeout 10 http://server:5000/api/tasks || { echo "Tasks API failed"; exit 1; }
           docker run --rm --network container:server curlimages/curl -v --connect-timeout 10 -X POST -H "Content-Type: application/json" -d '{"to":"test@example.com","subject":"Test","text":"Test email"}' http://server:5000/api/email/send || { echo "Email API failed"; exit 1; }
