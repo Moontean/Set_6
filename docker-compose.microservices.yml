@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cv-platform-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cv_platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cv-platform-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d cv_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: cv-platform-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - cv-platform-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # User/Auth Service
+  user-auth-service:
+    build:
+      context: ./services/user-auth-service
+      dockerfile: Dockerfile
+    container_name: user-auth-service
+    environment:
+      PORT: 3001
+      DB_HOST: postgres
+      DB_NAME: cv_platform
+      DB_USER: user
+      DB_PASSWORD: password
+      JWT_SECRET: your-secret-key-change-in-production
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cv-platform-network
+    restart: unless-stopped
+
+  # CV Management Service
+  cv-management-service:
+    build:
+      context: ./services/cv-management-service
+      dockerfile: Dockerfile
+    container_name: cv-management-service
+    environment:
+      PORT: 3002
+      DB_HOST: postgres
+      DB_NAME: cv_platform
+      DB_USER: user
+      DB_PASSWORD: password
+      JWT_SECRET: your-secret-key-change-in-production
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cv-platform-network
+    restart: unless-stopped
+
+  # Template/Export Service
+  template-export-service:
+    build:
+      context: ./services/template-export-service
+      dockerfile: Dockerfile
+    container_name: template-export-service
+    environment:
+      PORT: 3003
+    ports:
+      - "3003:3003"
+    networks:
+      - cv-platform-network
+    restart: unless-stopped
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    environment:
+      PORT: 3004
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@cvplatform.com}
+    ports:
+      - "3004:3004"
+    networks:
+      - cv-platform-network
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    environment:
+      PORT: 3000
+      JWT_SECRET: your-secret-key-change-in-production
+      REDIS_URL: redis://redis:6379
+      AUTH_SERVICE_URL: http://user-auth-service:3001
+      CV_SERVICE_URL: http://cv-management-service:3002
+      EXPORT_SERVICE_URL: http://template-export-service:3003
+      NOTIFICATION_SERVICE_URL: http://notification-service:3004
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis
+      - user-auth-service
+      - cv-management-service
+      - template-export-service
+      - notification-service
+    networks:
+      - cv-platform-network
+    restart: unless-stopped
+
+networks:
+  cv-platform-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
